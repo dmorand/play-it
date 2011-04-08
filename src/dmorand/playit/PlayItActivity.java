@@ -3,8 +3,6 @@ package dmorand.playit;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -19,25 +17,24 @@ import android.widget.Button;
 import android.widget.ListView;
 
 public final class PlayItActivity extends Activity implements OnClickListener, OnInitListener {
+    private static final String MUSIC_LOCATION = "/sdcard/music";
     private static final int SPEECH_RECOGNITION_REQUEST_CODE = 0;
 
-    private ListView mRecognitionResults;
-    private TextToSpeech mTextToSpeech;
-    private Set<String> mArtists;
+    private MusicRepository _musicRepository;
+    private ListView _recognitionResults;
+    private TextToSpeech _textToSpeech;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-        loadArtists();
+        loadMusicRepository();
 
         Button playItButton = (Button) findViewById(R.id.play_it_button);
         playItButton.setOnClickListener(this);
 
-        mRecognitionResults = (ListView) findViewById(R.id.recognition_results);
-        mRecognitionResults.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, new ArrayList<String>(mArtists)));
-
-        mTextToSpeech = new TextToSpeech(this, this);
+        _recognitionResults = (ListView) findViewById(R.id.recognition_results);
+        _textToSpeech = new TextToSpeech(this, this);
     }
 
     public void onInit(int arg0) {
@@ -51,23 +48,36 @@ public final class PlayItActivity extends Activity implements OnClickListener, O
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         if (requestCode == SPEECH_RECOGNITION_REQUEST_CODE && resultCode == RESULT_OK) {
-            List<String> results = filterResults(data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS));
-            mRecognitionResults.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, results));
+            ArrayList<String> originalResults = intent.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            List<String> filteredResults = filterResults(originalResults);
 
-            if (!results.isEmpty()) {
-                mTextToSpeech.speak(results.get(0), TextToSpeech.QUEUE_FLUSH, null);
+            if (filteredResults.isEmpty()) {
+                _recognitionResults.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, originalResults));
+            } else {
+                _recognitionResults.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, filteredResults));
+                _textToSpeech.speak(filteredResults.get(0), TextToSpeech.QUEUE_FLUSH, null);
             }
         }
 
-        super.onActivityResult(requestCode, resultCode, data);
+        super.onActivityResult(requestCode, resultCode, intent);
     }
 
     private List<String> filterResults(List<String> results) {
         List<String> filteredResults = new ArrayList<String>();
         for (String result : results) {
-            if (mArtists.contains(result)) {
+            if (_musicRepository.containsSong(result)) {
+                filteredResults.add(result);
+                continue;
+            }
+
+            if (_musicRepository.containsAlbum(result)) {
+                filteredResults.add(result);
+                continue;
+            }
+
+            if (_musicRepository.containsArtist(result)) {
                 filteredResults.add(result);
             }
         }
@@ -75,11 +85,24 @@ public final class PlayItActivity extends Activity implements OnClickListener, O
         return filteredResults;
     }
 
-    private void loadArtists() {
-        mArtists = new TreeSet<String>();
-        File file = new File("/sdcard/music");
-        for (String artist : file.list()) {
-            mArtists.add(artist.toLowerCase());
+    private void loadMusicRepository() {
+        _musicRepository = new MusicRepository();
+
+        File musicDirectory = new File(MUSIC_LOCATION);
+        for (File artistDirectory : musicDirectory.listFiles()) {
+            Artist artist = new Artist(artistDirectory.getName());
+
+            for (File albumDirectory : artistDirectory.listFiles()) {
+                Album album = new Album(albumDirectory.getName());
+
+                for (File songFile : albumDirectory.listFiles()) {
+                    album.addSong(new Song(songFile));
+                }
+
+                artist.addAlbum(album);
+            }
+
+            _musicRepository.addArtist(artist);
         }
     }
 }
