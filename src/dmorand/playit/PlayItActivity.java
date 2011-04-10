@@ -39,6 +39,13 @@ public final class PlayItActivity extends Activity implements OnClickListener, O
         playItButton.setOnClickListener(this);
 
         _recognitionResults = (ListView) findViewById(R.id.recognition_results);
+        List<String> songs = new ArrayList<String>();
+        for (int i = 0; i < 10; i++) {
+            songs.add(_musicRepository.getRandomSong().getTitle());
+        }
+
+        _recognitionResults.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, songs));
+
         _textToSpeech = new TextToSpeech(this, this);
         _mediaPlayer = new MediaPlayer();
     }

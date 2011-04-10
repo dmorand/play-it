@@ -2,6 +2,7 @@ package dmorand.playit;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 public final class MusicRepository {
@@ -28,5 +29,9 @@ public final class MusicRepository {
         }
 
         return matchedSongs;
+    }
+
+    public Song getRandomSong() {
+        return _artists.get(new Random().nextInt(_artists.size())).getRandomSong();
     }
 }
