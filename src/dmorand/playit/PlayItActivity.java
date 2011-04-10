@@ -2,10 +2,14 @@ package dmorand.playit;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
@@ -23,6 +27,7 @@ public final class PlayItActivity extends Activity implements OnClickListener, O
     private MusicRepository _musicRepository;
     private ListView _recognitionResults;
     private TextToSpeech _textToSpeech;
+    private MediaPlayer _mediaPlayer;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -35,12 +40,14 @@ public final class PlayItActivity extends Activity implements OnClickListener, O
 
         _recognitionResults = (ListView) findViewById(R.id.recognition_results);
         _textToSpeech = new TextToSpeech(this, this);
+        _mediaPlayer = new MediaPlayer();
     }
 
     public void onInit(int arg0) {
     }
 
     public void onClick(View v) {
+        _mediaPlayer.stop();
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH);
         intent.putExtra(RecognizerIntent.EXTRA_PROMPT, R.string.play_it);
@@ -50,39 +57,46 @@ public final class PlayItActivity extends Activity implements OnClickListener, O
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         if (requestCode == SPEECH_RECOGNITION_REQUEST_CODE && resultCode == RESULT_OK) {
-            ArrayList<String> originalResults = intent.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-            List<String> filteredResults = filterResults(originalResults);
+            ArrayList<String> results = intent.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            List<SongMatch> songMatches = matchSongs(results, 8, 0.6);
+            Collections.sort(songMatches);
 
-            if (filteredResults.isEmpty()) {
-                _recognitionResults.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, originalResults));
+            if (songMatches.isEmpty()) {
+                _recognitionResults.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, results));
             } else {
-                _recognitionResults.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, filteredResults));
-                _textToSpeech.speak(filteredResults.get(0), TextToSpeech.QUEUE_FLUSH, null);
+                List<String> songMatchTexts = new ArrayList<String>();
+                for (SongMatch songMatch : songMatches) {
+                    songMatchTexts.add("(" + songMatch.getScore() + ") " + songMatch.getSong().getTitle());
+                }
+
+                _recognitionResults.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, songMatchTexts));
+
+                Song song = songMatches.get(0).getSong();
+                _textToSpeech.speak(song.getTitle(), TextToSpeech.QUEUE_FLUSH, null);
+
+                try {
+                    _mediaPlayer.prepare();
+                    _mediaPlayer.setDataSource(song.getFile().getPath());
+                    _mediaPlayer.prepare();
+                    _mediaPlayer.start();
+                } catch (Exception exception) {
+                    _textToSpeech.speak("Impossible de jouer la chanson", TextToSpeech.QUEUE_FLUSH, null);
+                }
             }
         }
 
         super.onActivityResult(requestCode, resultCode, intent);
     }
 
-    private List<String> filterResults(List<String> results) {
-        List<String> filteredResults = new ArrayList<String>();
+    private List<SongMatch> matchSongs(List<String> results, int maxHypothesis, double threshold) {
+        results = results.subList(0, Math.min(results.size(), maxHypothesis));
+        Set<String> words = new HashSet<String>();
+
         for (String result : results) {
-            if (_musicRepository.containsSong(result)) {
-                filteredResults.add(result);
-                continue;
-            }
-
-            if (_musicRepository.containsAlbum(result)) {
-                filteredResults.add(result);
-                continue;
-            }
-
-            if (_musicRepository.containsArtist(result)) {
-                filteredResults.add(result);
-            }
+            words.addAll(StringUtils.getWords(result));
         }
 
-        return filteredResults;
+        return _musicRepository.matchSongs(words, threshold);
     }
 
     private void loadMusicRepository() {
@@ -93,13 +107,9 @@ public final class PlayItActivity extends Activity implements OnClickListener, O
             Artist artist = new Artist(artistDirectory.getName());
 
             for (File albumDirectory : artistDirectory.listFiles()) {
-                Album album = new Album(albumDirectory.getName());
-
                 for (File songFile : albumDirectory.listFiles()) {
-                    album.addSong(new Song(songFile));
+                    artist.addSong(new Song(songFile));
                 }
-
-                artist.addAlbum(album);
             }
 
             _musicRepository.addArtist(artist);

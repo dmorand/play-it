@@ -2,6 +2,7 @@ package dmorand.playit;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public final class MusicRepository {
     private final List<Artist> _artists = new ArrayList<Artist>();
@@ -20,23 +21,12 @@ public final class MusicRepository {
         return false;
     }
 
-    public boolean containsAlbum(String title) {
+    public List<SongMatch> matchSongs(Set<String> words, double threshold) {
+        List<SongMatch> matchedSongs = new ArrayList<SongMatch>();
         for (Artist artist : _artists) {
-            if (artist.containsAlbum(title)) {
-                return true;
-            }
+            matchedSongs.addAll(artist.matchSong(words, threshold));
         }
 
-        return false;
-    }
-
-    public boolean containsSong(String title) {
-        for (Artist artist : _artists) {
-            if (artist.containsSong(title)) {
-                return true;
-            }
-        }
-
-        return false;
+        return matchedSongs;
     }
 }
