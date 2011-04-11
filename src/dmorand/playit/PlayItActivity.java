@@ -47,14 +47,16 @@ public final class PlayItActivity extends Activity implements OnClickListener, O
         _recognitionResults.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, songs));
 
         _textToSpeech = new TextToSpeech(this, this);
-        _mediaPlayer = new MediaPlayer();
     }
 
     public void onInit(int arg0) {
     }
 
     public void onClick(View v) {
-        _mediaPlayer.stop();
+        if (_mediaPlayer != null) {
+            _mediaPlayer.stop();
+        }
+
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH);
         intent.putExtra(RecognizerIntent.EXTRA_PROMPT, R.string.play_it);
@@ -82,7 +84,7 @@ public final class PlayItActivity extends Activity implements OnClickListener, O
                 _textToSpeech.speak(song.getTitle(), TextToSpeech.QUEUE_FLUSH, null);
 
                 try {
-                    _mediaPlayer.prepare();
+                    _mediaPlayer = new MediaPlayer();
                     _mediaPlayer.setDataSource(song.getFile().getPath());
                     _mediaPlayer.prepare();
                     _mediaPlayer.start();

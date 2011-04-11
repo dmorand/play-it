@@ -37,11 +37,17 @@ public final class StringUtils {
 
     private static String normalizeWord(String word) {
         word = removeAccents(word);
+        word = removeTerminalString(word, "s");
+        word = removeTerminalString(word, "e");
         String substitution = WORD_SUBSTITUTIONS.get(word);
         return substitution == null ? word : substitution;
     }
 
     private static String removeAccents(String word) {
         return word.replace('é', 'e').replace('ê', 'e').replace('ê', 'e');
+    }
+
+    private static String removeTerminalString(String word, String string) {
+        return word.endsWith(string) ? word.substring(0, word.length() - string.length()) : word;
     }
 }
