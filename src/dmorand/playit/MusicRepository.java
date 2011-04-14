@@ -22,10 +22,10 @@ public final class MusicRepository {
         return false;
     }
 
-    public List<SongMatch> matchSongs(Set<String> words, double threshold) {
+    public List<SongMatch> matchSongs(Set<String> words, double averageWordCount, double threshold) {
         List<SongMatch> matchedSongs = new ArrayList<SongMatch>();
         for (Artist artist : _artists) {
-            matchedSongs.addAll(artist.matchSong(words, threshold));
+            matchedSongs.addAll(artist.matchSong(words, averageWordCount, threshold));
         }
 
         return matchedSongs;

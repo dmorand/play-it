@@ -24,16 +24,18 @@ public final class Artist {
         _songs.add(song);
     }
 
-    public List<SongMatch> matchSong(Set<String> words, double threshold) {
+    public List<SongMatch> matchSong(Set<String> words, double averageWordCount, double threshold) {
         Set<String> intersection = new HashSet<String>(_words);
         intersection.retainAll(words);
         double artistBonus = ((double) intersection.size()) / words.size();
 
         List<SongMatch> songMatches = new ArrayList<SongMatch>();
         for (Song song : _songs) {
-            double score = song.match(words);
+            double score = song.match(words, averageWordCount);
+            score += artistBonus;
+
             if (score >= threshold) {
-                songMatches.add(new SongMatch(song, score + artistBonus));
+                songMatches.add(new SongMatch(song, score));
             }
         }
 

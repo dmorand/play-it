@@ -99,13 +99,18 @@ public final class PlayItActivity extends Activity implements OnClickListener, O
 
     private List<SongMatch> matchSongs(List<String> results, int maxHypothesis, double threshold) {
         results = results.subList(0, Math.min(results.size(), maxHypothesis));
+
+        double averageWordCount = 0;
         Set<String> words = new HashSet<String>();
 
         for (String result : results) {
-            words.addAll(StringUtils.getWords(result));
+            Set<String> resultWords = StringUtils.getWords(result);
+            averageWordCount += resultWords.size();
+            words.addAll(resultWords);
         }
 
-        return _musicRepository.matchSongs(words, threshold);
+        averageWordCount /= results.size();
+        return _musicRepository.matchSongs(words, averageWordCount, threshold);
     }
 
     private void loadMusicRepository() {

@@ -23,11 +23,15 @@ public final class Song {
         return _title;
     }
 
-    public double match(Set<String> words) {
+    public double match(Set<String> words, double averageWordCount) {
         Set<String> intersection = new HashSet<String>(_words);
         intersection.retainAll(words);
 
         int wordCount = _words.size();
-        return (((double) intersection.size()) / wordCount) + (wordCount * 0.02);
+        double score = intersection.size();
+        score /= wordCount;
+        score += wordCount * 0.02;
+        score -= Math.abs(wordCount - averageWordCount) * 0.02;
+        return score;
     }
 }
